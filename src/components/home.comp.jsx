@@ -9,7 +9,7 @@ export default function HomeComp() {
         </h1>
         <p className="text-xl text-white">Guess a number between 1 and 20</p>
         <p className="text-xl text-white">
-          Play against computer and catch some fun
+          Play against an alien and save our planent from collapsing
         </p>
 
         <Link

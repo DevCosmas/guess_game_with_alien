@@ -1,9 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { generate_random_number } from '../utils/randomNum';
 
 export default function GameBoardComp() {
   const [isOpen, setIsOpen] = useState(false);
   const [humanGuess, setHumanGuess] = useState(null);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [randomNum, setRandomNum] = useState(null);
 
   const onClose = () => {
     setIsOpen(false);
@@ -15,6 +17,27 @@ export default function GameBoardComp() {
 
     console.log('Selected guess is', humanGuess);
   };
+
+  const handleHumanGenNum = () => {
+    setIsGenerating(true);
+    const random = generate_random_number();
+    if (random) {
+      setIsGenerating(false);
+      setRandomNum(random);
+    } else {
+      setIsGenerating(false);
+    }
+  };
+
+  useEffect(() => {
+    if (randomNum) {
+      const timer = setTimeout(() => {
+        setRandomNum(null);
+      }, 3000);
+
+      return () => clearTimeout(timer);
+    }
+  }, [randomNum, setRandomNum]);
 
   return (
     <div className="bg-gray-800 fixed text-slate-50 w-full h-full flex flex-col gap-4 py-6 px-4">
@@ -49,11 +72,15 @@ export default function GameBoardComp() {
           Make a Guess
         </button>
       </div>
-
+      {randomNum && (
+        <p className="text-gray-200 text-center capitalize italic">
+          Generated a random Number
+        </p>
+      )}
       <button
-        onClick={() => generate_random_number()}
+        onClick={() => handleHumanGenNum()}
         className="bg-gradient-to-r w-4/5 sm:w-1/2 mx-auto from-purple-500 to-indigo-500 text-white font-bold py-3 px-6 rounded-lg shadow-lg transform transition duration-300 ease-in-out hover:scale-105 hover:shadow-xl focus:outline-none focus:ring-4 focus:ring-indigo-500">
-        Generate a Number
+        {isGenerating ? 'Generating' : ' Generate a Number'}
       </button>
 
       <PickANumberModal
