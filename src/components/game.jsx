@@ -6,6 +6,83 @@ export default function GameBoardComp() {
   const [humanGuess, setHumanGuess] = useState(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [randomNum, setRandomNum] = useState(null);
+  const [alienScoreCount, setAlienScoreCount] = useState(10);
+  const [humanScoreCount, setHumanScoreCount] = useState(10);
+  const [humanScoreBoard, setHumanScoreBoard] = useState(0);
+  const [alienScoreBoard, setAlienScoreBoard] = useState(0);
+  const [turn, setTurn] = useState('alien');
+  const [gameMessage, setGameMessage] = useState('');
+
+  // const handleAlienGuess = (humanRandNum) => {
+  //   const alienRandNum = generate_random_number();
+  //   console.log('Alien guessed a number:', alienRandNum);
+
+  //   if (alienRandNum !== humanRandNum) {
+  //     setAlienScoreCount((prev) => prev - 1);
+  //     setTurn('human');
+  //     setGameMessage('Oops! Alien missed. Your turn now.');
+  //   } else {
+  //     setAlienScoreBoard((prev) => prev + 1);
+  //     setTurn('alien');
+  //     setGameMessage('Alien guessed correctly! Alien wins this round.');
+  //   }
+  // };
+
+  //   const handleHumanGenNum = () => {
+  //     if (turn === 'human') {
+  //       setIsGenerating(true);
+  //       const random = generate_random_number();
+
+  //       console.log('Human generated a number:', random);
+  //       if (random) {
+  //         setIsGenerating(false);
+  //         setRandomNum(random);
+  //         setGameMessage(`You generated ${random}. Alien's turn to guess!`);
+  //         handleAlienGuess(random);
+  //       } else {
+  //         setIsGenerating(false);
+  //       }
+  //     } else {
+  //       console.log('Not Your Turn');
+  //       setGameMessage('Wait for your turn!');
+  //     }
+  //   };
+
+  const handleHumanGenNum = () => {
+    if (turn === 'human') {
+      setIsGenerating(true);
+      const humanRandNum = generate_random_number();
+
+      console.log('Human generated a number:', humanRandNum);
+
+      if (humanRandNum) {
+        setIsGenerating(false);
+        setRandomNum(humanRandNum);
+        setGameMessage('Alien is guessing...');
+        handleAlienGuess(humanRandNum);
+      } else {
+        setIsGenerating(false);
+      }
+    } else {
+      setGameMessage('Not Your Turn');
+    }
+  };
+
+  const handleAlienGuess = (humanRandNum) => {
+    setTimeout(() => {
+      const alienRandNum = generate_random_number();
+      console.log('Alien guessed a number:', alienRandNum);
+
+      if (alienRandNum !== humanRandNum) {
+        setAlienScoreCount((prev) => prev - 1);
+        setGameMessage('Alien missed! generate again.');
+        setTurn('human');
+      } else {
+        setGameMessage('Alien guessed correctly! Your Turn to Guess');
+        setTurn('alien');
+      }
+    }, 7000);
+  };
 
   const onClose = () => {
     setIsOpen(false);
@@ -14,34 +91,50 @@ export default function GameBoardComp() {
   const handleHumanGuess = (guess) => {
     setHumanGuess(guess);
     setIsOpen(false);
-
-    console.log('Selected guess is', humanGuess);
-  };
-
-  const handleHumanGenNum = () => {
-    setIsGenerating(true);
-    const random = generate_random_number();
-    if (random) {
-      setIsGenerating(false);
-      setRandomNum(random);
-    } else {
-      setIsGenerating(false);
-    }
+    setGameMessage(`You picked ${guess}. Let's see what alien is hiding.`);
+    console.log('Selected guess is', guess);
   };
 
   useEffect(() => {
     if (randomNum) {
       const timer = setTimeout(() => {
         setRandomNum(null);
-      }, 3000);
+      }, 1000);
 
       return () => clearTimeout(timer);
     }
   }, [randomNum, setRandomNum]);
 
+  useEffect(() => {
+    if (turn === 'alien') {
+      const random = generate_random_number();
+      console.log(random, 'alien');
+      setRandomNum(random);
+
+      if (random === humanGuess) {
+        setHumanScoreCount((prev) => prev);
+        setGameMessage('You guessed correctly!');
+        setTurn('human');
+      } else {
+        setHumanScoreCount((prev) => prev - 1);
+        setGameMessage('Oops! you missed.');
+        setTurn('alien');
+      }
+
+      // const timer = setTimeout(() => {
+      //   setRandomNum(null);
+      // }, 1000);
+
+      // return () => clearTimeout(timer);
+    }
+  }, [turn, humanGuess]);
+
   return (
     <div className="bg-gray-800 fixed text-slate-50 w-full h-full flex flex-col gap-4 py-6 px-4">
-      <ScoreBoard />
+      <ScoreBoard
+        computerScoreBoard={alienScoreBoard}
+        humanScoreBoard={humanScoreBoard}
+      />
 
       <div className="text-center my-11">
         <h1 className="text-3xl font-bold mb-4">Guess My Number</h1>
@@ -52,7 +145,7 @@ export default function GameBoardComp() {
               alt="alien"
               className="w-full h-full object-contain"
             />
-            <p>Score: 5</p>
+            <p>Score: {alienScoreCount}</p>
           </div>
           <span className="text-5xl bg-yellow-500 text-gray-800 px-4 py-2 rounded-full">
             ?
@@ -63,7 +156,7 @@ export default function GameBoardComp() {
               alt="human"
               className="w-full h-full object-contain"
             />
-            <p>Score: 5</p>
+            <p>Score: {humanScoreCount}</p>
           </div>
         </div>
         <button
@@ -76,6 +169,9 @@ export default function GameBoardComp() {
         <p className="text-gray-200 text-center capitalize italic">
           Generated a random Number
         </p>
+      )}
+      {gameMessage && (
+        <p className="text-gray-200 text-center mt-4 italic">{gameMessage}</p>
       )}
       <button
         onClick={() => handleHumanGenNum()}
@@ -92,7 +188,7 @@ export default function GameBoardComp() {
   );
 }
 
-function ScoreBoard({ computerScore = 0, humanScore = 0 }) {
+function ScoreBoard({ computerScoreBoard, humanScoreBoard }) {
   return (
     <>
       <h1 className="text-center text-3xl font-bold py-4">Score Board</h1>
@@ -103,7 +199,7 @@ function ScoreBoard({ computerScore = 0, humanScore = 0 }) {
             aria-label="Computer Score">
             Alien
           </h2>
-          <p className="text-4xl font-sans">{computerScore}</p>
+          <p className="text-4xl font-sans">{computerScoreBoard}</p>
         </article>
         <article className="flex flex-col items-center gap-4">
           <h2
@@ -111,7 +207,7 @@ function ScoreBoard({ computerScore = 0, humanScore = 0 }) {
             aria-label="Your Score">
             Human
           </h2>
-          <p className="text-4xl font-sans">{humanScore}</p>
+          <p className="text-4xl font-sans">{humanScoreBoard}</p>
         </article>
       </section>
     </>
