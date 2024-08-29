@@ -1,5 +1,23 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { generate_random_number } from '../utils/randomNum';
+
+function ScoreBoard({ computerScoreBoard, humanScoreBoard }) {
+  return (
+    <>
+      <h1 className="text-slate-200 font-bold text-2xl">Score Board</h1>
+      <div className="flex justify-around shadow-lg border border-indigo-300 py-6 px-2 rounded-xl items-center w-full max-w-lg mb-8">
+        <div className="flex flex-col items-center">
+          <h3 className="text-2xl font-bold text-red-500">👽</h3>
+          <p className="text-3xl font-semibold">{computerScoreBoard}</p>
+        </div>
+        <div className="flex flex-col items-center">
+          <h3 className="text-2xl font-bold text-blue-500">👨</h3>
+          <p className="text-3xl font-semibold">{humanScoreBoard}</p>
+        </div>
+      </div>
+    </>
+  );
+}
 
 export default function GameBoardComp() {
   const [isOpen, setIsOpen] = useState(false);
@@ -14,10 +32,12 @@ export default function GameBoardComp() {
   const [gameMessage, setGameMessage] = useState('');
   const [isGameOver, setIsGameOver] = useState(false);
   const [winner, setWinner] = useState();
+  const [hint, setHint] = useState('');
+
+  const guessSoundRef = useRef(null);
+  const winSoundRef = useRef(null);
 
   useEffect(() => {
-    localStorage.getItem('alien');
-    localStorage.getItem('alien');
     setAlienScoreBoard(parseInt(localStorage.getItem('alien')) || 0);
     setHumanScoreBoard(parseInt(localStorage.getItem('human')) || 0);
   }, []);
@@ -77,6 +97,16 @@ export default function GameBoardComp() {
     setIsOpen(false);
     setGameMessage(`You picked ${guess}. Let's see what alien is hiding.`);
     console.log('Selected guess is', guess);
+
+    if (guess === randomNum) {
+      setHumanScoreCount((prev) => prev);
+      setGameMessage('You guessed correctly!');
+      setTurn('human');
+    } else {
+      setHumanScoreCount((prev) => prev - 1);
+      setGameMessage('Oops! you missed.');
+      setTurn('alien');
+    }
   };
 
   const playAgain = () => {
@@ -100,29 +130,15 @@ export default function GameBoardComp() {
       const random = generate_random_number();
       console.log(random, 'alien');
       setRandomNum(random);
-
-      if (random === humanGuess) {
-        setHumanScoreCount((prev) => prev);
-        setGameMessage('You guessed correctly!');
-        setTurn('human');
-      } else {
-        setHumanScoreCount((prev) => prev - 1);
-        setGameMessage('Oops! you missed.');
-        setTurn('alien');
-      }
-
-      // const timer = setTimeout(() => {
-      //   setRandomNum(null);
-      // }, 1000);
-
-      // return () => clearTimeout(timer);
     }
-  }, [turn, humanGuess]);
+  }, [turn]);
 
   useEffect(() => {
     if (humanScoreCount === 0 || alienScoreCount === 0) {
       setIsGameOver(true);
       console.log('This round is finished');
+
+      // winSoundRef.current.play();
     }
     if (isGameOver && humanScoreCount === 0) {
       setGameMessage('You Lost!');
@@ -149,172 +165,127 @@ export default function GameBoardComp() {
 
   persistScoreBoard();
 
+  const getHint = () => {
+    const hint = `The alien number is between ${randomNum <= 10 ? 1 : 11} and ${
+      randomNum <= 10 ? 10 : 20
+    }.`;
+    setHint(hint);
+  };
+
   return (
-    <div className="bg-gray-800 fixed text-slate-50 w-full h-full flex flex-col gap-4 py-6 px-4">
+    <div className="bg-gray-900 fixed text-white w-full min-h-full flex flex-col gap-6 py-6 px-4 items-center justify-center">
+      <audio
+        ref={guessSoundRef}
+        src="./sounds/guess.mp3"></audio>
+      <audio
+        ref={winSoundRef}
+        src="./sounds/win.mp3"></audio>
+
       <ScoreBoard
         computerScoreBoard={alienScoreBoard}
         humanScoreBoard={humanScoreBoard}
       />
 
-      <div className="text-center my-11">
-        <h1 className="text-3xl font-bold mb-4">Guess My Number</h1>
-        <div className="flex sm:justify-evenly justify-between items-center text-xl font-bold">
-          <div className="w-24 h-24 flex flex-col gap-2 items-center">
+      <div className="text-center mb-8 w-full px-2 sm:w-4/5">
+        <h1 className="text-4xl font-bold mb-6">Guess My Number</h1>
+        <div className="flex justify-between items-center text-xl w-full font-bold mb-6 gap-8">
+          <div className="w-24 h-24 flex flex-col justify-between  items-center">
             <img
               src="./alien.png"
               alt="alien"
               className="w-full h-full object-contain"
             />
-            <p>Score: {alienScoreCount}</p>
+            <p className="text-lg mt-2">Alien</p>
+            <p className="text-xl font-semibold">{alienScoreCount}</p>
           </div>
-          <span className="text-5xl bg-yellow-500 text-gray-800 px-4 py-2 rounded-full">
+          <div className="w-10 h-10 text-xl bg-yellow-500 text-gray-900 flex items-center justify-center rounded-full">
             ?
-          </span>
-          <div className="w-24 h-24 flex flex-col gap-2 items-center">
+          </div>
+          <div className="w-24 h-24 flex flex-col items-center">
             <img
               src="./human.png"
               alt="human"
               className="w-full h-full object-contain"
             />
-            <p>Score: {humanScoreCount}</p>
+            <p className="text-lg mt-2">Human</p>
+            <p className="text-xl font-semibold">{humanScoreCount}</p>
           </div>
         </div>
         <button
           onClick={() => setIsOpen(!isOpen)}
-          className="mt-6 bg-green-600 hover:bg-green-700 text-slate-50 py-2 px-4 rounded-md">
+          className="bg-gradient-to-r from-green-500 to-green-700 hover:from-green-600 hover:to-green-800 text-white py-2 px-6 rounded-md mb-4 transition-all duration-200">
           Make a Guess
         </button>
       </div>
+
       {randomNum && (
-        <p className="text-gray-200 text-center capitalize italic">
-          Generated a random Number
+        <p className="text-yellow-300 text-center text-xl capitalize italic">
+          Generating a number...
         </p>
       )}
       {gameMessage && (
-        <p className="text-gray-200 text-center text-2xl mt-4 italic">
+        <p className="text-green-300 text-center text-2xl mt-4 italic">
           {gameMessage}
         </p>
       )}
-      <button
-        onClick={() => handleHumanGenNum()}
-        className="bg-gradient-to-r w-4/5 sm:w-1/2 mx-auto from-purple-500 to-indigo-500 text-white font-bold py-3 px-6 rounded-lg shadow-lg transform transition duration-300 ease-in-out hover:scale-105 hover:shadow-xl focus:outline-none focus:ring-4 focus:ring-indigo-500">
-        {isGenerating ? 'Generating' : ' Generate a Number'}
-      </button>
-
-      <PickANumberModal
-        isOpen={isOpen}
-        onClose={onClose}
-        onPick={handleHumanGuess}
-      />
-
-      {isGameOver && (
-        <GameOverModal
-          winner={winner}
-          playAgain={playAgain}
-        />
+      {hint && (
+        <p className="text-blue-300 text-center text-xl mt-2 italic">
+          Hint: {hint}
+        </p>
       )}
-    </div>
-  );
-}
 
-function ScoreBoard({ computerScoreBoard, humanScoreBoard }) {
-  return (
-    <>
-      <h1 className="text-center text-3xl font-bold py-4">Score Board</h1>
-      <section className="flex items-center border-b-2 border-slate-300 justify-evenly p-6 bg-gray-900 text-slate-50 rounded-lg shadow-lg">
-        <article className="flex flex-col items-center gap-4">
-          <h2
-            className="uppercase bg-red-600 px-2 py-2 rounded-md"
-            aria-label="Computer Score">
-            Alien
-          </h2>
-          <p className="text-4xl font-sans">{computerScoreBoard}</p>
-        </article>
-        <article className="flex flex-col items-center gap-4">
-          <h2
-            className="uppercase bg-green-600 px-2 py-2 rounded-md"
-            aria-label="Your Score">
-            Human
-          </h2>
-          <p className="text-4xl font-sans">{humanScoreBoard}</p>
-        </article>
-      </section>
-    </>
-  );
-}
-
-function PickANumberModal({ isOpen, onClose, onPick }) {
-  const [selectedNumber, setSelectedNumber] = useState('');
-
-  if (!isOpen) return null;
-
-  const numbers = Array.from({ length: 20 }, (_, i) => i + 1);
-
-  const handleNumberClick = (number) => {
-    setSelectedNumber(number);
-  };
-
-  const handleConfirm = () => {
-    if (selectedNumber) {
-      onPick(selectedNumber);
-      setSelectedNumber('');
-    }
-  };
-
-  return (
-    <div className="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50">
-      <div className="bg-gray-800 text-white w-96 p-8 rounded-lg shadow-xl">
-        <h2 className="text-center text-3xl font-bold mb-6">Pick a Number</h2>
-        <div className="grid grid-cols-5 gap-4 mb-6">
-          {numbers.map((number) => (
-            <div
-              key={number}
-              className={`flex items-center justify-center h-12 text-2xl font-bold cursor-pointer rounded-lg transition-transform transform ${
-                selectedNumber === number
-                  ? 'bg-blue-600 text-white scale-105'
-                  : 'bg-gray-600 text-gray-300 hover:bg-gray-500'
-              }`}
-              onClick={() => handleNumberClick(number)}>
-              {number}
-            </div>
-          ))}
-        </div>
-        <div className="flex justify-center gap-4">
-          <button
-            className="bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-md font-bold"
-            onClick={handleConfirm}>
-            Confirm
-          </button>
-          <button
-            className="bg-red-600 hover:bg-red-700 text-white py-2 px-4 rounded-md font-bold"
-            onClick={onClose}>
-            Cancel
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function GameOverModal({ winner, playAgain }) {
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50">
-      <div className="bg-gray-800 w-4/5 sm:w-1/3 p-6 rounded-lg shadow-lg border border-white">
-        <div className="flex flex-col items-center mb-4">
-          <h1 className="text-6xl mb-2">{winner === 'human' ? '👊' : '❌'}</h1>
-          <h1
-            className={`text-3xl font-bold ${
-              winner === 'human' ? 'text-green-500' : 'text-red-500'
-            }`}>
-            {winner === 'human' ? 'You Won!' : 'You Lost!'}
-          </h1>
-        </div>
+      <div className="flex gap-3 flex-wrap ">
         <button
-          onClick={playAgain}
-          className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-md transition duration-300">
-          Play Again
+          onClick={() => handleHumanGenNum()}
+          className="bg-gradient-to-r  mx-auto from-purple-500 to-indigo-500 text-white font-bold py-3 px-6 rounded-lg shadow-lg transform transition duration-300 ease-in-out hover:scale-105 hover:shadow-xl focus:outline-none focus:ring-4 focus:ring-indigo-500 mt-2">
+          {isGenerating ? 'Generating' : 'Generate a Number'}
+        </button>
+
+        <button
+          onClick={getHint}
+          className="mt-2 bg-yellow-600 hover:bg-yellow-700 mx-auto text-white py-2 px-6 rounded-md transition-all duration-200">
+          Get Hint
         </button>
       </div>
+
+      {isOpen && (
+        <div
+          className="fixed inset-0 flex items-center justify-center bg-gray-900 bg-opacity-75 z-50"
+          onClick={onClose}>
+          <div
+            className="bg-gray-800 rounded-lg p-8 text-white sm:w-1/2 max-w-full mx-4"
+            onClick={(e) => e.stopPropagation()}>
+            <h2 className="text-2xl font-bold mb-4 text-center">
+              Choose a Number
+            </h2>
+            <div className="grid grid-cols-5 gap-4">
+              {Array.from({ length: 20 }, (_, i) => (
+                <button
+                  key={i + 1}
+                  onClick={() => handleHumanGuess(i + 1)}
+                  className="bg-gray-700 hover:bg-gray-600 text-xl py-2 px-4 rounded-lg transition-all duration-200">
+                  {i + 1}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isGameOver && (
+        <div className="fixed inset-0 flex items-center justify-center bg-gray-900 bg-opacity-90 z-50">
+          <div className="bg-gray-800 rounded-lg p-8 text-center w-80 max-w-full mx-4">
+            <h2 className="text-4xl font-bold mb-4 text-white">
+              {winner} Won!
+            </h2>
+            <button
+              onClick={playAgain}
+              className="bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-600 hover:to-indigo-600 text-white py-2 px-6 rounded-md transition-all duration-200">
+              Play Again
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

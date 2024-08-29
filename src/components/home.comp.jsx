@@ -1,6 +1,10 @@
+import { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 
 export default function HomeComp() {
+  useEffect(() => {
+    document.title = 'Guess the Number Game | Home';
+  });
   return (
     <div className="bg-gray-800 text-slate-50 fixed h-full w-full flex flex-col justify-center items-center">
       <div className="px-6">
