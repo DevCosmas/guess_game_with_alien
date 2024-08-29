@@ -10,43 +10,17 @@ export default function GameBoardComp() {
   const [humanScoreCount, setHumanScoreCount] = useState(10);
   const [humanScoreBoard, setHumanScoreBoard] = useState(0);
   const [alienScoreBoard, setAlienScoreBoard] = useState(0);
-  const [turn, setTurn] = useState('alien');
+  const [turn, setTurn] = useState('human');
   const [gameMessage, setGameMessage] = useState('');
+  const [isGameOver, setIsGameOver] = useState(false);
+  const [winner, setWinner] = useState();
 
-  // const handleAlienGuess = (humanRandNum) => {
-  //   const alienRandNum = generate_random_number();
-  //   console.log('Alien guessed a number:', alienRandNum);
-
-  //   if (alienRandNum !== humanRandNum) {
-  //     setAlienScoreCount((prev) => prev - 1);
-  //     setTurn('human');
-  //     setGameMessage('Oops! Alien missed. Your turn now.');
-  //   } else {
-  //     setAlienScoreBoard((prev) => prev + 1);
-  //     setTurn('alien');
-  //     setGameMessage('Alien guessed correctly! Alien wins this round.');
-  //   }
-  // };
-
-  //   const handleHumanGenNum = () => {
-  //     if (turn === 'human') {
-  //       setIsGenerating(true);
-  //       const random = generate_random_number();
-
-  //       console.log('Human generated a number:', random);
-  //       if (random) {
-  //         setIsGenerating(false);
-  //         setRandomNum(random);
-  //         setGameMessage(`You generated ${random}. Alien's turn to guess!`);
-  //         handleAlienGuess(random);
-  //       } else {
-  //         setIsGenerating(false);
-  //       }
-  //     } else {
-  //       console.log('Not Your Turn');
-  //       setGameMessage('Wait for your turn!');
-  //     }
-  //   };
+  useEffect(() => {
+    localStorage.getItem('alien');
+    localStorage.getItem('alien');
+    setAlienScoreBoard(parseInt(localStorage.getItem('alien')) || 0);
+    setHumanScoreBoard(parseInt(localStorage.getItem('human')) || 0);
+  }, []);
 
   const handleHumanGenNum = () => {
     if (turn === 'human') {
@@ -70,16 +44,26 @@ export default function GameBoardComp() {
 
   const handleAlienGuess = (humanRandNum) => {
     setTimeout(() => {
-      const alienRandNum = generate_random_number();
+      const isCorrect = Math.random() < 0.8;
+
+      let alienRandNum;
+      if (isCorrect) {
+        alienRandNum = humanRandNum;
+      } else {
+        do {
+          alienRandNum = generate_random_number();
+        } while (alienRandNum === humanRandNum);
+      }
+
       console.log('Alien guessed a number:', alienRandNum);
 
-      if (alienRandNum !== humanRandNum) {
-        setAlienScoreCount((prev) => prev - 1);
-        setGameMessage('Alien missed! generate again.');
-        setTurn('human');
-      } else {
+      if (alienRandNum === humanRandNum) {
         setGameMessage('Alien guessed correctly! Your Turn to Guess');
         setTurn('alien');
+      } else {
+        setAlienScoreCount((prev) => prev - 1);
+        setGameMessage('Alien missed! Generate again.');
+        setTurn('human');
       }
     }, 7000);
   };
@@ -93,6 +77,12 @@ export default function GameBoardComp() {
     setIsOpen(false);
     setGameMessage(`You picked ${guess}. Let's see what alien is hiding.`);
     console.log('Selected guess is', guess);
+  };
+
+  const playAgain = () => {
+    setAlienScoreCount(10);
+    setHumanScoreCount(10);
+    setIsGameOver(false);
   };
 
   useEffect(() => {
@@ -128,6 +118,36 @@ export default function GameBoardComp() {
       // return () => clearTimeout(timer);
     }
   }, [turn, humanGuess]);
+
+  useEffect(() => {
+    if (humanScoreCount === 0 || alienScoreCount === 0) {
+      setIsGameOver(true);
+      console.log('This round is finished');
+    }
+    if (isGameOver && humanScoreCount === 0) {
+      setGameMessage('You Lost!');
+      setWinner('alien');
+      setHumanScoreBoard((prev) => prev);
+      setAlienScoreBoard((prev) => prev + 1);
+    }
+
+    if (isGameOver && alienScoreCount === 0) {
+      setGameMessage('You Won!');
+      setWinner('human');
+      setHumanScoreBoard((prev) => prev + 1);
+      setAlienScoreBoard((prev) => prev);
+    }
+  }, [humanScoreCount, alienScoreCount, isGameOver]);
+
+  const persistScoreBoard = () => {
+    if (isGameOver) {
+      localStorage.setItem('alien', alienScoreBoard);
+      localStorage.setItem('human', humanScoreBoard);
+    }
+    return;
+  };
+
+  persistScoreBoard();
 
   return (
     <div className="bg-gray-800 fixed text-slate-50 w-full h-full flex flex-col gap-4 py-6 px-4">
@@ -171,7 +191,9 @@ export default function GameBoardComp() {
         </p>
       )}
       {gameMessage && (
-        <p className="text-gray-200 text-center mt-4 italic">{gameMessage}</p>
+        <p className="text-gray-200 text-center text-2xl mt-4 italic">
+          {gameMessage}
+        </p>
       )}
       <button
         onClick={() => handleHumanGenNum()}
@@ -184,6 +206,13 @@ export default function GameBoardComp() {
         onClose={onClose}
         onPick={handleHumanGuess}
       />
+
+      {isGameOver && (
+        <GameOverModal
+          winner={winner}
+          playAgain={playAgain}
+        />
+      )}
     </div>
   );
 }
@@ -262,6 +291,29 @@ function PickANumberModal({ isOpen, onClose, onPick }) {
             Cancel
           </button>
         </div>
+      </div>
+    </div>
+  );
+}
+
+function GameOverModal({ winner, playAgain }) {
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50">
+      <div className="bg-gray-800 w-4/5 sm:w-1/3 p-6 rounded-lg shadow-lg border border-white">
+        <div className="flex flex-col items-center mb-4">
+          <h1 className="text-6xl mb-2">{winner === 'human' ? '👊' : '❌'}</h1>
+          <h1
+            className={`text-3xl font-bold ${
+              winner === 'human' ? 'text-green-500' : 'text-red-500'
+            }`}>
+            {winner === 'human' ? 'You Won!' : 'You Lost!'}
+          </h1>
+        </div>
+        <button
+          onClick={playAgain}
+          className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-md transition duration-300">
+          Play Again
+        </button>
       </div>
     </div>
   );
